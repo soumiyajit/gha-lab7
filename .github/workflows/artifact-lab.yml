@@ -63,3 +63,25 @@ jobs:
             backend/
             !backend/tests/   # The '!' tells GitHub to EXCLUDE this folder
             frontend/dist/    # Assuming your build goes to 'dist'
+  test-matrix:
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          
+      - name: Run Tests
+        run: |
+          mkdir test-results
+          echo "Tests passed on Node ${{ matrix.node-version }}" > test-results/result-${{ matrix.node-version }}.txt
+          
+      - name: Upload Version Specific Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: test-results/
