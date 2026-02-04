@@ -1,0 +1,65 @@
+name: Artifact Understanding Lab
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # JOB 1: The "Producer"
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Simulate Frontend Build
+        run: |
+          mkdir build
+          echo "<html><body><h1>Academia Synapse v1.0</h1></body></html>" > build/index.html
+          echo "Build Complete at $(date)" > build/metadata.txt
+
+      # THE UPLOAD STEP
+      - name: Upload Build Folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build-files  # Name of the "zip" file
+          path: build/                  # The folder we want to save
+          retention-days: 1             # How long to keep it (default is 90)
+
+  # JOB 2: The "Consumer"
+  test-deployment:
+    needs: build-frontend  # Wait for the build to finish
+    runs-on: ubuntu-latest
+    steps:
+      # THE DOWNLOAD STEP
+      - name: Download Build Folder
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build-files
+          path: downloaded-build/
+
+      - name: Verify Artifact Contents
+        run: |
+          echo "Listing files received from the previous job:"
+          ls -R downloaded-build/
+          cat downloaded-build/metadata.txt
+    
+  package-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Prepare Backend
+        run: |
+          cd backend
+          npm install --production # Only install what's needed to run, not test
+          
+      - name: Create Unified Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-app-bundle
+          path: |
+            backend/
+            !backend/tests/   # The '!' tells GitHub to EXCLUDE this folder
+            frontend/dist/    # Assuming your build goes to 'dist'
